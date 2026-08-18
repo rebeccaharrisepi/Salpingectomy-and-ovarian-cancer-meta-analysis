@@ -1,0 +1,325 @@
+****** Salpingectomy and risk of Ovarian Cancer *****;
+******  Created by Karen Tuesley 28 Sept 2023 *******;
+*********************  Analysis  ********************;
+
+libname salping "G:\Karen Tuesley\Salpingectomy_2023\SAS_Setup_File";
+libname gdrive "G:\Karen Tuesley\SAS Code\1. Nested Case Control Analysis\SAS files";
+libname pbs "G:\Original data from AIHW\Release 2 - Nov 2018\national pbs\SAS pbs files";
+libname store "G:\Karen Tuesley\SEIFA setup";
+libname seifa "G:\Karen Tuesley\SEIFA setup\source files";
+
+
+Data WA;
+	set risksets2;
+	where cancerstate2 = 3;
+
+	* Years since surgery;
+	if salany= 1 then do;
+		salyears =  (indexdate- salany_date)/365.25;
+		salany_yrs = 1;
+		if salany_date < (indexdate-(5*365.25)) then salany_yrs = 2;
+		if salany_date < (indexdate-(10*365.25)) then salany_yrs = 3;
+		if salany_date < (indexdate-(20*365.25)) then salany_yrs = 4; 
+	* Age at surgery;
+		salany_age = 1;
+		if (salany_date - mdy(6,30,birth_year))/365.25 >= 50 then salany_age = 2;
+	end;
+
+	salp10 = salany_yrs;
+	if salany_yrs = 4 then salp10 = 3;
+run;
+
+proc logistic data=WA ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+
+proc logistic data=WA ;
+	class  parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity;
+run;
+
+proc logistic data=WA ;
+	class salany_age(ref = first);
+	strata setid;
+	model censor(event='1')= salany_age  ;
+run;
+
+proc logistic data=WA ;
+	class salany_age(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany_age hyst oophany tubal PID1 endo famhis parity;
+run;
+
+proc logistic data=WA ;
+	class salp10(ref = first);
+	strata setid;
+	model censor(event='1')= salp10 ;
+run;
+
+proc logistic data=WA ;
+	class salp10(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salp10 hyst oophany tubal PID1 endo famhis parity;
+run;
+
+* p value for trend;
+proc logistic data=WA ;
+	strata setid;
+	model censor(event='1')= salp10 ;
+run;
+
+proc logistic data=WA ;
+	class salany_yrs(ref = first);
+	strata setid;
+	model censor(event='1')= salany_yrs ;
+run;
+
+proc logistic data=WA ;
+	class salany_yrs(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany_yrs hyst oophany tubal PID1 endo famhis parity;
+run;
+
+proc logistic data=WA ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+
+proc logistic data=WA ;
+	class salcat(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+proc logistic data=WA ;
+	class bilsal_age(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= bilsal_age;
+run;
+
+proc logistic data=WA ;
+	class bilsal_age(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= bilsal_age hyst  PID1 endo famhis parity;
+run;
+
+proc logistic data=WA ;
+	class bilsal_yrs(ref = first) ;
+	strata setid;
+	model censor(event='1')= bilsal_yrs  ;
+run;
+
+proc logistic data=WA ;
+	class bilsal_yrs(ref = first)  parity(ref = first);
+	strata setid;
+	model censor(event='1')= bilsal_yrs hyst  PID1 endo famhis parity;
+run;
+
+
+*** Histotypes ***;
+
+proc freq data=wa;
+	table ocsubtype2*caco  / missing norow nocol nopercent;
+run;
+proc print data=wa (obs=5);
+	where ocsubtype2 = 8 and caco =1;
+run;
+
+data type1;
+	set WA;
+	where ocsubtype2 < 6;
+run;
+proc freq data=type1;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=type1 ;
+	strata setid;
+	model censor(event='1')= salany  ;
+run;
+proc logistic data=type1 ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat;
+run;
+proc logistic data=type1 ;
+	strata setid;
+	class parity(ref = first);
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity ;
+run;
+proc logistic data=type1 ;
+	class salcat(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+data type2;
+	set WA;
+	where ocsubtype2 >= 6;
+run;
+proc freq data=type2;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=type2 ;
+	strata setid;
+	model censor(event='1')= salany  ;
+run;
+proc logistic data=type2 ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat;
+run;
+proc logistic data=type2 ;
+	class parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity ;
+run;
+proc logistic data=type2 ;
+	class salcat(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+
+data serous;
+	set WA;
+	where ocsubtype2 = 6;
+run;
+proc freq data=serous;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=serous ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+proc logistic data=serous ;
+	class  parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity ;
+run;
+proc logistic data=serous ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+proc logistic data=serous ;
+	class salcat(ref = first) parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+data endomet;
+	set WA;
+	where ocsubtype2 = 2;
+run;
+proc freq data=endomet;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=endomet ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+proc logistic data=endomet ;
+	class  parity(ref = first);
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity ;
+run;
+proc logistic data=endomet ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+proc logistic data=endomet ;
+	class salcat(ref = first)  parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+
+data mucinous;
+	set WA;
+	where ocsubtype2 = 3;
+run;
+proc freq data=mucinous;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=mucinous ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+proc logistic data=mucinous ;
+	class  parity(ref = first);;
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity;
+run;
+proc logistic data=mucinous ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+proc logistic data=mucinous ;
+	class salcat(ref = first)   parity(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+data clear;
+	set WA;
+	where ocsubtype2 = 1;
+run;
+proc freq data=clear;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=clear ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+proc logistic data=clear ;
+	class   parity(ref = first);;
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis  parity;
+run;
+proc logistic data=clear ;
+	class   parity(ref = first);;
+	strata setid parity;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo  ;
+run;
+proc logistic data=clear ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+proc logistic data=clear ;
+	class salcat(ref = first) parity(ref = first);;
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
+
+
+data clear;
+	set WA;
+	where ocsubtype2 = 1;
+run;
+proc freq data=clear;
+	table (salany salcat )*caco  / missing norow nocol nopercent;
+run;
+proc logistic data=clear ;
+	strata setid;
+	model censor(event='1')= salany ;
+run;
+proc logistic data=clear ;
+	strata setid;
+	model censor(event='1')= salany hyst oophany tubal PID1 endo famhis parity;
+run;
+proc logistic data=clear ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat ;
+run;
+proc logistic data=clear ;
+	class salcat(ref = first);
+	strata setid;
+	model censor(event='1')= salcat hyst PID1 endo famhis parity;
+run;
